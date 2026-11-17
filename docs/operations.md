@@ -1,5 +1,15 @@
 # Operations reference
 
+## Managed bubblewrap executable
+
+`AUTOCRAFT_BWRAP_BIN` selects an absolute bubblewrap executable path (default
+`/usr/bin/bwrap`). Both the availability check and sandbox launch use this path.
+An invalid or unavailable override never falls back to another executable.
+`CRAFT_AUTO_BWRAP_BIN` is the legacy-prefix fallback. Use this when a managed
+installation needs a separate host security profile. Executable availability
+is not isolation proof: exercise the sandbox before enabling tool-using model
+calls. This option does not disable sandboxing or change mounts.
+
 Local mirror of every storytold issue and PR, the triage pipeline's state, and the backlog dashboard.
 
 - `autocraft sync` fills a SQLite mirror (`~/.local/share/autocraft/mirror.db`, or `$AUTOCRAFT_DB`) from GitHub GraphQL. Agents and scripts query the mirror instead of calling `gh`.
