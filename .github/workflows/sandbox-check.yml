@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
-      AUTOCRAFT_DB: ${{ runner.temp }}/autocraft-sandbox-test.db
+      AUTOCRAFT_DB: /tmp/autocraft-sandbox-test.db
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v4.4.0
