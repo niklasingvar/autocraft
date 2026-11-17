@@ -4,6 +4,8 @@
 // empty home and the account's credentials: its credentials file, or with a
 // long-lived token only that token (no credentials file, so no refresh token). Network is
 // shared because the API needs it; everything else is a new namespace. The environment is the exact one in the returned `env`.
+import { isAbsolute } from "node:path";
+import { envVar } from "../env.ts";
 
 /** Where the checkout appears inside the sandbox: outside the working directory, so claude never loads its instruction files as project memory. */
 export const REPO_PATH = "/repo";
@@ -54,6 +56,13 @@ const MOUNT_PATH = /^\/[A-Za-z0-9._\/-]{1,200}$/;
 
 export const BWRAP = "/usr/bin/bwrap";
 
+/** Managed installations can give this executable a separate host security profile. */
+export function bwrapBin(): string {
+  const bin = envVar("BWRAP_BIN") ?? BWRAP;
+  if (!isAbsolute(bin) || bin.includes("\0")) throw new Error("BWRAP_BIN must be an absolute executable path");
+  return bin;
+}
+
 /**
  * The command and the complete environment of the bwrap process. The caller
  * passes `env` as the process's whole environment (nothing of the host's):
@@ -85,5 +94,5 @@ export function sandboxCommand(s: SandboxSpec): { cmd: string; args: string[]; e
     "--chdir", WORK_PATH,
     CLAUDE_PATH, ...s.claudeArgs,
   ];
-  return { cmd: BWRAP, args, env: { ...Object.fromEntries(env), ...(s.oauthToken ? { CLAUDE_CODE_OAUTH_TOKEN: s.oauthToken } : {}) } };
+  return { cmd: bwrapBin(), args, env: { ...Object.fromEntries(env), ...(s.oauthToken ? { CLAUDE_CODE_OAUTH_TOKEN: s.oauthToken } : {}) } };
 }

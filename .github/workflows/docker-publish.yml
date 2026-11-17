@@ -19,6 +19,7 @@ concurrency:
 
 jobs:
   publish:
+    if: github.repository == 'storytold/autocraft'
     uses: storytold/craft-common-actions/.github/workflows/docker-build.yml@main
     secrets: inherit
     with:

@@ -4,7 +4,7 @@
 import { accessSync, constants, existsSync, readFileSync, realpathSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import { exec, fixupDir, Git } from "../fixup/git.ts";
-import { SHARED_NAME } from "./command.ts";
+import { bwrapBin, SHARED_NAME } from "./command.ts";
 import { pruneSessionStores } from "./session-store.ts";
 import { buildCheckout, checkoutRoot, pruneCheckouts } from "./checkout.ts";
 
@@ -29,7 +29,11 @@ export function resolveClaudeBin(): string | null {
 
 /** Whether tool mode can run on this machine: bubblewrap and the claude binary are present. */
 export function sandboxAvailable(): boolean {
-  return envVar("NO_SANDBOX") !== "1" && existsSync("/usr/bin/bwrap") && resolveClaudeBin() !== null;
+  if (envVar("NO_SANDBOX") === "1") return false;
+  try {
+    accessSync(bwrapBin(), constants.X_OK);
+    return resolveClaudeBin() !== null;
+  } catch { return false; }
 }
 
 /** A sandboxed call needs at least this much token lifetime left, because the sandbox never refreshes; the call waits for an account that has it. */

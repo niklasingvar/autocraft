@@ -15,10 +15,13 @@ import { SAMPLE_FIXUP_PRS } from "../src/prompts/samples.ts";
 import { SAMPLE_VERIFY_PLAN } from "../src/verify/types.ts";
 import { buildCheckout, safePath } from "../src/sandbox/checkout.ts";
 import { REPO_PATH, sandboxCommand } from "../src/sandbox/command.ts";
-import { tokenNearExpiry } from "../src/sandbox/index.ts";
+import { sandboxAvailable, tokenNearExpiry } from "../src/sandbox/index.ts";
 import type { SessionAsk } from "../src/prepush/resume.ts";
 import { useTestAccount } from "./accounts-fixture.ts";
 import { SCRATCH } from "./scratch.ts";
+
+// Never let a deployed item snapshot change the arguments of fixture calls.
+process.env.AUTOCRAFT_SNAPSHOT_DIR = join(SCRATCH, "item-snapshot");
 
 mkdirSync(SCRATCH, { recursive: true });
 const dir = mkdtempSync(join(SCRATCH, "sandbox-test-"));
@@ -26,6 +29,31 @@ const dir = mkdtempSync(join(SCRATCH, "sandbox-test-"));
 const fakeCreds = (expiresAt: number | string) => JSON.stringify({ claudeAiOauth: { accessToken: "fake-access", refreshToken: "fake-refresh", expiresAt } });
 const spec = { claudeBin: "/h/claude-bin", checkout: "/h/checkout", credentials: "/h/acct/.credentials.json", claudeArgs: ["-p", "--tools", "Read"] };
 const pairs = (args: string[], flag: string) => args.flatMap((a, i) => (a === flag ? [args.slice(i + 1, i + 3).join(" ")] : []));
+
+test("configured bubblewrap path controls command and availability without fallback", () => {
+  const keys = ["AUTOCRAFT_BWRAP_BIN", "CRAFT_AUTO_BWRAP_BIN", "AUTOCRAFT_CLAUDE_BIN", "AUTOCRAFT_NO_SANDBOX", "CRAFT_AUTO_NO_SANDBOX"];
+  const saved = keys.map((key) => process.env[key]);
+  try {
+    for (const key of keys) delete process.env[key];
+    assert.equal(sandboxCommand(spec).cmd, "/usr/bin/bwrap");
+    process.env.AUTOCRAFT_CLAUDE_BIN = process.execPath;
+    process.env.AUTOCRAFT_BWRAP_BIN = process.execPath;
+    assert.equal(sandboxCommand(spec).cmd, process.execPath);
+    assert.equal(sandboxAvailable(), true);
+    process.env.AUTOCRAFT_BWRAP_BIN = "/definitely-missing/autocraft-bwrap";
+    assert.equal(sandboxAvailable(), false);
+    process.env.AUTOCRAFT_BWRAP_BIN = "bwrap";
+    assert.throws(() => sandboxCommand(spec), /absolute executable path/);
+    assert.equal(sandboxAvailable(), false);
+    delete process.env.AUTOCRAFT_BWRAP_BIN;
+    process.env.CRAFT_AUTO_BWRAP_BIN = process.execPath;
+    assert.equal(sandboxCommand(spec).cmd, process.execPath);
+    process.env.AUTOCRAFT_NO_SANDBOX = "1";
+    assert.equal(sandboxAvailable(), false);
+  } finally {
+    keys.forEach((key, i) => { if (saved[i] === undefined) delete process.env[key]; else process.env[key] = saved[i]; });
+  }
+});
 
 describe("sandbox command", () => {
   const { cmd, args } = sandboxCommand(spec);
