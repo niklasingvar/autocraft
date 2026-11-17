@@ -20,6 +20,9 @@ import type { SessionAsk } from "../src/prepush/resume.ts";
 import { useTestAccount } from "./accounts-fixture.ts";
 import { SCRATCH } from "./scratch.ts";
 
+// Never let a deployed item snapshot change the arguments of fixture calls.
+process.env.AUTOCRAFT_SNAPSHOT_DIR = join(SCRATCH, "item-snapshot");
+
 mkdirSync(SCRATCH, { recursive: true });
 const dir = mkdtempSync(join(SCRATCH, "sandbox-test-"));
 
